@@ -10,7 +10,8 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const eventSource = new EventSource("http://localhost:8080/api/sse", {
+    const sseUrl = import.meta.env.VITE_SSE_URL ; // http://localhost:8080/api/sse 
+    const eventSource = new EventSource(sseUrl, {
       withCredentials: true,
     });
 

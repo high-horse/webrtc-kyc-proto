@@ -138,10 +138,10 @@ export default function KycFormPage() {
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={dateOfBirth}
-                    onSelect={(date) => setValue('dateOfBirth', date as Date)}
+                    selected={dateOfBirth ? new Date(dateOfBirth) : undefined} 
+                    onSelect={(date) => setValue('dateOfBirth',  date ? date.toISOString() : '')}
                     initialFocus
-                    captionLayout="dropdown-buttons"
+                    captionLayout="dropdown"
                     fromYear={1900}
                     toYear={new Date().getFullYear() - 18}
                   />

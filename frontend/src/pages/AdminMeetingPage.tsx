@@ -41,26 +41,15 @@ export default function AdminMeetingPage() {
     fetchMeeting();
   }, [meetingId]);
 
-  const handleStartMeeting_ = async () => {
-    if (!meetingId) return;
 
-    try {
-      // Tell backend: admin is starting the meeting
-      await api.post(`/kyc/session/${meetingId}/start`);
-
-      // Redirect to actual video call room (shared with customer)
-      navigate(`/kyc-call/${meetingId}`);
-    } catch (err: any) {
-      alert("Failed to start meeting");
-    }
-  };
   const handleStartMeeting = async () => {
     try {
       // 1. Tell backend to mark session as ongoing
       await api.post(`/kyc/session/${meetingId}/start`);
 
       // 2. Connect to WebSocket and signal customer
-      const ws = new WebSocket("ws://localhost:8080/ws");
+      const wsUrl = import.meta.env.VITE_WS_URL ; //"ws://localhost:8080/ws"
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         ws.send(
