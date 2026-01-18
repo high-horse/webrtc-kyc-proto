@@ -7,13 +7,22 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	_ "modernc.org/sqlite"
 )
 
 var DB *gorm.DB
 
 func Connect() {
 	var err error
-	DB, err = gorm.Open(sqlite.Open(config.DB_FILE), &gorm.Config{})
+	// DB, err = gorm.Open(sqlite.Open(config.DB_FILE), &gorm.Config{})
+
+	DB, err = gorm.Open(
+		sqlite.Dialector{
+			DriverName: "sqlite",
+			DSN:        config.DB_FILE,
+		},
+		&gorm.Config{},
+	)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
