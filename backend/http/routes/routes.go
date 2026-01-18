@@ -14,10 +14,14 @@ import (
 func Setup(router *gin.Engine) {
     // Put CORS as early as possible
     router.Use(cors.New(cors.Config{
-        AllowOriginFunc: func(origin string) bool {
-            return true // ← still ok for dev
-            // Later: return origin == "http://localhost:3000" || origin == "https://your-frontend.com"
+        AllowOrigins: []string{
+            "http://localhost:5173",          // Vite dev
+            "https://test-kyc-app.duckdns.org",      // prod
         },
+        // AllowOriginFunc: func(origin string) bool {
+        //     return true // ← still ok for dev
+        //     // Later: return origin == "http://localhost:3000" || origin == "https://your-frontend.com"
+        // },
         AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
         AllowHeaders:     []string{"Accept", "Authorization", "Content-Type", "Origin", "X-Requested-With"},
         ExposeHeaders:    []string{"Content-Length", "Content-Type"},

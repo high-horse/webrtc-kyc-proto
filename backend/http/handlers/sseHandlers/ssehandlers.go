@@ -16,8 +16,71 @@ var (
 	notifierMutex  = &sync.RWMutex{}
 )
 
-// SSEHandler streams events to connected admins
+
 func SSEHandler(c *gin.Context) {
+	// ---- SSE / CORS headers ----
+	origin := c.GetHeader("Origin")
+	if origin == "" {
+		origin = "*" // fallback
+	}
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+	c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept")
+
+	// Preflight OPTIONS (for CORS)
+	if c.Request.Method == http.MethodOptions {
+		c.AbortWithStatus(http.StatusNoContent)
+		return
+	}
+
+	// ---- Ensure the response can be flushed ----
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	// ---- Create a dedicated notification channel for this connection ----
+	notificationChan := make(chan string, 10)
+	notifierMutex.Lock()
+	adminNotifiers["admin"] = notificationChan
+	notifierMutex.Unlock()
+
+	defer func() {
+		notifierMutex.Lock()
+		delete(adminNotifiers, "admin")
+		close(notificationChan)
+		notifierMutex.Unlock()
+	}()
+
+	// ---- Heartbeat ticker to keep connection alive ----
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Send initial connection event
+	c.SSEvent("ping", "connected")
+	flusher.Flush()
+
+	for {
+		select {
+		case msg := <-notificationChan:
+			c.SSEvent("meeting_request", msg)
+			flusher.Flush()
+		case <-ticker.C:
+			c.SSEvent("ping", "keep-alive")
+			flusher.Flush()
+		case <-c.Request.Context().Done():
+			return
+		}
+	}
+}
+
+// SSEHandler streams events to connected admins
+func SSEHandler_(c *gin.Context) {
 	// Optional: authenticate as admin (skip for prototype)
 	// c.Writer.Header().Set("Content-Type", "text/event-stream")
 	// c.Writer.Header().Set("Cache-Control", "no-cache")

@@ -5,24 +5,17 @@ import (
 	"kyc-backend/internal/models"
 	"log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite" // ✅ Pure Go, CGO-free, GORM-native
 	"gorm.io/gorm"
-	_ "modernc.org/sqlite"
 )
 
 var DB *gorm.DB
 
 func Connect() {
 	var err error
-	// DB, err = gorm.Open(sqlite.Open(config.DB_FILE), &gorm.Config{})
 
-	DB, err = gorm.Open(
-		sqlite.Dialector{
-			DriverName: "sqlite",
-			DSN:        config.DB_FILE,
-		},
-		&gorm.Config{},
-	)
+	// Use glebarez/sqlite — works with CGO_ENABLED=0
+	DB, err = gorm.Open(sqlite.Open(config.DB_FILE+"?_loc=auto"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
@@ -33,7 +26,6 @@ func Connect() {
 
 	log.Println("Database connected and migrated!")
 }
-
 
 func migrateModels() error {
 	return DB.AutoMigrate(
