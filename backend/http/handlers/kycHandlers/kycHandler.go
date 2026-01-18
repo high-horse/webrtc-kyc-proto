@@ -108,7 +108,8 @@ func ScheduleKYCMeeting(c *gin.Context) {
 	database.DB.Model(&customer).Update("kyc_status", "scheduled")
 
 	// In real app: send email/SMS with link
-	meetingLink := fmt.Sprintf("http://localhost:5173/kyc/%s", meetingID)
+
+	meetingLink := fmt.Sprintf("https://test-kyc-app.duckdns.org//kyc/%s", meetingID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Meeting scheduled",
