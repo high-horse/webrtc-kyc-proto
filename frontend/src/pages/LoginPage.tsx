@@ -18,7 +18,31 @@ export default function LoginPage({ role = "user" }: LoginPageProps) {
 
   const handleLogin = async () => {
     try {
-      await api.post("/login", { email, password, role });
+      const response = await api.post("/login", { email, password, role });
+
+      // Store token in localStorage
+      if (response.data.token) {
+        localStorage.setItem("auth_token", response.data.token);
+      }
+
+      // Fetch user profile
+      const res = await api.get("/profile");
+      setUser(res.data);
+      setError("");
+
+      // Redirect to dashboard or intended page
+      navigate((location.state as any)?.from || "/dashboard");
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Login failed");
+      // Clear token on login failure
+      localStorage.removeItem("auth_token");
+    }
+  };
+  
+  const handleLogin_ = async () => {
+    try {
+      let response = await api.post("/login", { email, password, role });
+      localStorage.setItem("auth_token", response.data.token);
       const res = await api.get("/profile");
       setUser(res.data);
       setError("");
@@ -31,7 +55,11 @@ export default function LoginPage({ role = "user" }: LoginPageProps) {
   };
 
   const heading =
-    role === "admin" ? "Admin Login" : role === "partner" ? "Partner Login" : "User Login";
+    role === "admin"
+      ? "Admin Login"
+      : role === "partner"
+      ? "Partner Login"
+      : "User Login";
 
   return (
     <div className="w-full max-w-md p-8 border rounded-lg shadow-md bg-white">
@@ -54,7 +82,7 @@ export default function LoginPage({ role = "user" }: LoginPageProps) {
         Login
       </Button>
       {error && <p className="mt-4 text-red-500">{error}</p>}
-        <p className="mt-4 text-center text-sm text-gray-600">
+      <p className="mt-4 text-center text-sm text-gray-600">
         Don't have an account?{" "}
         <Link to="/register" className="text-blue-500 hover:underline">
           Register
