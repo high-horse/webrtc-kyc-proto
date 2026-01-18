@@ -38,22 +38,8 @@ export default function LoginPage({ role = "user" }: LoginPageProps) {
       localStorage.removeItem("auth_token");
     }
   };
+
   
-  const handleLogin_ = async () => {
-    try {
-      let response = await api.post("/login", { email, password, role });
-      localStorage.setItem("auth_token", response.data.token);
-      const res = await api.get("/profile");
-      setUser(res.data);
-      setError("");
-
-      // redirect to dashboard or intended page
-      navigate((location.state as any)?.from || "/dashboard");
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Login failed");
-    }
-  };
-
   const heading =
     role === "admin"
       ? "Admin Login"

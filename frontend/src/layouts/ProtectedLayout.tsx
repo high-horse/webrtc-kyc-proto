@@ -54,10 +54,6 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
       navigate("/login");
     }
   };
-  const handleLogout_ = async () => {
-    await logout();
-    navigate("/login");
-  };
 
   return (
     <div className="min-h-screen flex flex-col">
