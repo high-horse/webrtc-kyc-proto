@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
-
+import api from "@/lib/api";
 
 interface ProtectedLayoutProps {
   children: ReactNode;
@@ -13,6 +13,7 @@ interface ProtectedLayoutProps {
 export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const setUser = useAuthStore((state) => state.setUser);
   const fetchUser = useAuthStore((state) => state.fetchUser);
 
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,19 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   }
 
   const handleLogout = async () => {
+    try {
+      await api.post("/logout");
+      localStorage.removeItem("auth_token");
+      setUser(null);
+      navigate("/login");
+    } catch (err) {
+      // Clear local data anyway
+      localStorage.removeItem("auth_token");
+      setUser(null);
+      navigate("/login");
+    }
+  };
+  const handleLogout_ = async () => {
     await logout();
     navigate("/login");
   };
