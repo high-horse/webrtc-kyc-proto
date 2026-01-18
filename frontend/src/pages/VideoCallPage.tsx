@@ -55,8 +55,23 @@ export default function VideoCallPage() {
 
         // Handle remote stream
         pc.ontrack = (event) => {
+          console.log("Remote track received:", event);
           if (remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = event.streams[0];
+          }
+        };
+
+        // ICE CANDIDATE QUEUE
+        const iceCandidateQueue: RTCIceCandidate[] = [];
+
+        const processIceQueue = () => {
+          while (iceCandidateQueue.length > 0) {
+            const candidate = iceCandidateQueue.shift();
+            if (candidate) {
+              pc.addIceCandidate(candidate).catch((e) =>
+                console.warn("Failed to add queued ICE candidate", e)
+              );
+            }
           }
         };
 
@@ -74,11 +89,20 @@ export default function VideoCallPage() {
         };
 
         // Connect to WebSocket
-        const wsUrl = import.meta.env.VITE_WS_URL ; // ws://localhost:8080/ws
+        const wsUrl = import.meta.env.VITE_WS_URL;
+        console.log("Connecting to WebSocket:", wsUrl);
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        ws.onopen = () => {
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          setError("WebSocket connection failed");
+        };
+
+        ws.onopen = async () => {
+          console.log("WebSocket connected");
+          
+          // Send join-room message
           ws.send(
             JSON.stringify({
               event: "join-room",
@@ -87,29 +111,36 @@ export default function VideoCallPage() {
               role: isCustomer ? "customer" : "agent",
             })
           );
-        };
 
-        // ICE CANDIDATE QUEUE
-        const iceCandidateQueue: RTCIceCandidate[] = [];
-
-        const processIceQueue = () => {
-          while (iceCandidateQueue.length > 0) {
-            const candidate = iceCandidateQueue.shift();
-            if (candidate) {
-              pc.addIceCandidate(candidate).catch((e) =>
-                console.warn("Failed to add queued ICE candidate", e)
-              );
-            }
+          // Agent creates offer AFTER joining the room
+          if (!isCustomer) {
+            console.log("Agent creating offer...");
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            ws.send(
+              JSON.stringify({
+                event: "offer",
+                sdp: offer,
+                room: meetingId,
+              })
+            );
           }
         };
 
         ws.onmessage = async (event) => {
           try {
             const msg = JSON.parse(event.data);
+            console.log("WebSocket message received:", msg.event);
+            
             let answer;
             switch (msg.event) {
+              case "user-joined":
+                console.log("User joined:", msg.id);
+                break;
+
               case "offer":
                 if (!isCustomer) return;
+                console.log("Received offer");
                 const offer = new RTCSessionDescription(msg.sdp);
                 await pc.setRemoteDescription(offer);
                 processIceQueue(); // Process queued candidates AFTER setting remote description
@@ -123,10 +154,12 @@ export default function VideoCallPage() {
                     room: meetingId,
                   })
                 );
+                console.log("Sent answer");
                 break;
 
               case "answer":
                 if (isCustomer) return;
+                console.log("Received answer");
                 answer = new RTCSessionDescription(msg.sdp);
                 await pc.setRemoteDescription(answer);
                 processIceQueue(); // Process queued candidates AFTER setting remote description
@@ -136,8 +169,10 @@ export default function VideoCallPage() {
                 if (msg.candidate) {
                   const candidate = new RTCIceCandidate(msg.candidate);
                   if (!pc.remoteDescription) {
+                    console.log("Queueing ICE candidate");
                     iceCandidateQueue.push(candidate); // Queue if no remote description
                   } else {
+                    console.log("Adding ICE candidate");
                     pc.addIceCandidate(candidate).catch((e) =>
                       console.warn("Failed to add ICE candidate", e)
                     );
@@ -156,25 +191,14 @@ export default function VideoCallPage() {
           }
         };
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
+          console.log("WebSocket closed:", event.code, event.reason);
           if (isCalling) {
             setError("Connection lost.");
             hangUp();
           }
         };
 
-        // Agent creates offer
-        if (!isCustomer) {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          ws.send(
-            JSON.stringify({
-              event: "offer",
-              sdp: offer,
-              room: meetingId,
-            })
-          );
-        }
       } catch (err: any) {
         console.error("WebRTC setup failed:", err);
         setError(
@@ -204,7 +228,7 @@ export default function VideoCallPage() {
     return () => {
       hangUp();
     };
-  }, [meetingId, navigate, user]);
+  }, [meetingId, navigate, isCustomer]);
 
   const toggleMute = () => {
     if (localStreamRef.current) {
