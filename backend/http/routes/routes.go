@@ -50,4 +50,10 @@ func Setup(router *gin.Engine) {
         protected.GET("/profile", authHandlers.Profile)
 		protected.POST("/kyc/session/:meetingId/start", kycHandlers.StartKYCSession)
     }
+    
+    router.GET("/", func(c *gin.Context) {
+        c.JSON(200, gin.H{
+            "status": "healthy",
+        })
+    })
 }
